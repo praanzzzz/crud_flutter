@@ -3,7 +3,7 @@ import 'package:crud_flutter/services/firestore.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -17,7 +17,12 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController textController = TextEditingController();
 
   //open dialog box
-  void openNoteBox(String? docID) {
+  void openNoteBox(String? docID, {String? currentNote}) {
+    // If docID is not null, set the textController's text to the current note text
+    if (currentNote != null) {
+      textController.text = currentNote;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -29,11 +34,11 @@ class _HomePageState extends State<HomePage> {
             ElevatedButton(
               onPressed: () {
                 //add the note
-                if (docID == null){
+                if (docID == null) {
                   firestoreService.addNote(textController.text);
                 }
                 //update an existing note
-                else{
+                else {
                   firestoreService.updateNote(docID, textController.text);
                 }
                 //clear the note
@@ -41,9 +46,40 @@ class _HomePageState extends State<HomePage> {
                 //close the dialog box
                 Navigator.pop(context);
               },
-              child: Text("Add"),
+              child: const Text("Add"),
             )
           ]),
+    ).then((_) {
+      // Clear the text controller after the dialog is closed
+      textController.clear();
+    });
+  }
+
+  // function to show confirmation dialog before deleting a note
+  void confirmDelete(String docID) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Delete"),
+        content: const Text("Are you sure you want to delete this note?"),
+        actions: [
+          // Button to cancel the deletion
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          // Button to confirm the deletion
+          TextButton(
+            onPressed: () {
+              firestoreService.deleteNote(docID);
+              Navigator.pop(context);
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -65,13 +101,13 @@ class _HomePageState extends State<HomePage> {
                 bottomLeft: Radius.circular(25)),
           ),
           elevation: 0.00,
-          backgroundColor: Color.fromARGB(255, 0, 118, 215),
+          backgroundColor: const Color.fromARGB(255, 0, 118, 215),
         ),
         floatingActionButton: FloatingActionButton(
-          backgroundColor: Color.fromARGB(255, 0, 123, 224),
+          backgroundColor: const Color.fromARGB(255, 0, 123, 224),
           // onPressed: openNoteBox,//from yt
           onPressed: () => openNoteBox(null), //corrected by gpt using null
-          child: Icon(
+          child: const Icon(
             Icons.add,
             color: Colors.white,
           ),
@@ -83,44 +119,75 @@ class _HomePageState extends State<HomePage> {
             if (snapshot.hasData) {
               List notesList = snapshot.data!.docs;
 
-              //display as a list
+              // If the notesList is empty, show a centered "No notes" message
+              if (notesList.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No notes...',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                );
+              }
+
               return ListView.builder(
                 itemCount: notesList.length,
                 itemBuilder: (context, index) {
-                //get each individual doc
-                DocumentSnapshot document = notesList[index];
-                String docID = document.id;
+                  // Get each individual doc
+                  DocumentSnapshot document = notesList[index];
+                  String docID = document.id;
 
-                //get note from each doc
-                Map<String, dynamic> data =
-                    document.data() as Map<String, dynamic>;
-                String noteText = data['note'];
+                  // Get note from each doc
+                  Map<String, dynamic> data =
+                      document.data() as Map<String, dynamic>;
+                  String noteText = data['note'];
 
-                //display as a list Tile
-                return ListTile(
-                  title: Text(noteText),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  // Display as a ListTile within a gray Container
+
+                  return Column(
                     children: [
-                      //update
-                      IconButton(
-                        onPressed: () => openNoteBox(docID),//check here from gpt
-                        // onPressed: () => openNoteBox(docID: docID),//from yt
-                        icon: Icon(Icons.edit),
-                      ),
-                      //delete
-                      IconButton(
-                        onPressed: () => firestoreService.deleteNote(docID),
-                        icon: Icon(Icons.delete),
+                      const SizedBox(
+                          height: 10.0), 
+                      Container(
+                        color: Colors
+                            .grey[300], 
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4.0,
+                            horizontal: 8.0), 
+                        child: ListTile(
+                          title: Text(noteText),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Update
+                              IconButton(
+                                onPressed: () => openNoteBox(docID,
+                                    currentNote:
+                                        noteText), // Pass current note text
+                                icon: const Icon(Icons.edit),
+                              ),
+                              // Delete
+                              IconButton(
+                                onPressed: () => confirmDelete(
+                                    docID), // Changed to confirmDelete function
+                                icon: const Icon(Icons.delete),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
-                  )
-                );
-              });
+                  );
+                },
+              );
             }
-            //if there is not data, return nothing
-            else{
-              return Text('No notes...');
+            //if there is an error or no data, return nothing
+            else {
+              return const Center(
+                child: Text(
+                  'No notes...',
+                  style: TextStyle(fontSize: 20),
+                ),
+              );
             }
           },
         ));
