@@ -1,2 +1,5 @@
-# crud_flutter
-notes app with flutter - crud using firebase as backend service and database
+# notes app in flutter and firebase
+CRUD using flutter and firebase
+splashscreen, gridview, listview, searchbar
+
+
