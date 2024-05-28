@@ -1,5 +1,4 @@
-# CRUD using flutter and firebase
-# splashscreen, gridview, listview, searchbar
+# CRUD using flutter and firebase with splashscreen, gridview, listview, searchbar
 
 
 
